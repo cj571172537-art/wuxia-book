@@ -1,148 +1,126 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, RefreshCw, Download, CheckCircle2 } from 'lucide-react';
 
 interface InkImageProps {
-  prompt: string;
   alt: string;
   className?: string;
+  imageUrl?: string | null;
+  onImageChange: (dataUrl: string | null) => void;
 }
 
-export const InkImage: React.FC<InkImageProps> = ({ prompt, alt, className }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hasRequested = useRef(false);
+export const InkImage: React.FC<InkImageProps> = ({ alt, className, imageUrl, onImageChange }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const generateImage = async () => {
-    if (loading) return;
-    setLoading(true);
-    setError(null);
-    setIsQuotaExceeded(false);
-    
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [{ text: prompt + ", cinematic lighting, moody, deep shadows, high contrast, traditional Chinese aesthetic, ink wash style" }],
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: "16:9",
-            imageSize: "1K"
-          },
-        },
-      });
-
-      const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-      if (part?.inlineData) {
-        const base64EncodeString = part.inlineData.data;
-        setImageUrl(`data:image/png;base64,${base64EncodeString}`);
-      } else {
-        throw new Error("No image data in response");
-      }
-    } catch (err: any) {
-      console.error("Image generation failed:", err);
-      
-      const isQuotaError = err?.message?.includes("429") || err?.status === "RESOURCE_EXHAUSTED";
-      
-      if (isQuotaError) {
-        setIsQuotaExceeded(true);
-        setError("画师暂歇（API 配额已满）");
-      } else {
-        setError("意境难成，请稍后再试");
-      }
-      
-      // Fallback to a thematic placeholder
-      setImageUrl(`https://picsum.photos/seed/${encodeURIComponent(prompt)}/1200/675?grayscale&blur=2`);
-    } finally {
-      setLoading(false);
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onImageChange(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !hasRequested.current) {
-          hasRequested.current = true;
-          generateImage();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
+  const clearImage = () => {
+    onImageChange(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
+  };
 
-    return () => observer.disconnect();
-  }, [prompt]);
+  const downloadImage = () => {
+    if (!imageUrl) return;
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `assassin-${alt.replace(/\s+/g, '-')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
-    <div ref={containerRef} className={`relative overflow-hidden bg-black/40 ${className}`}>
+    <div className={`relative overflow-hidden bg-stone-100/50 border border-stone-200 rounded-3xl ${className}`}>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleUpload}
+        accept="image/*"
+        className="hidden"
+      />
+
       <AnimatePresence mode="wait">
-        {!hasRequested.current || loading ? (
+        {!imageUrl ? (
           <motion.div
-            key="loading"
+            key="empty"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/20"
+            className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center"
           >
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <span className="text-xs font-serif italic tracking-[0.3em]">
-              {!hasRequested.current ? "等待入画..." : "正在构图..."}
-            </span>
+            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-6 shadow-sm border border-stone-100">
+              <ImageIcon className="w-10 h-10 text-stone-200" />
+            </div>
+            <h4 className="text-lg font-serif mb-2 text-stone-800">上传剧照或意境图</h4>
+            <p className="text-xs text-stone-400 mb-8 max-w-[240px] leading-relaxed">
+              为此章节上传一张你认为契合意境的图片，它将被自动保存。
+            </p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 px-8 py-3 bg-stone-900 text-white text-sm font-serif rounded-full hover:bg-ink-red transition-all shadow-lg shadow-stone-200"
+            >
+              <Upload className="w-4 h-4" />
+              选择图片
+            </button>
           </motion.div>
-        ) : error ? (
+        ) : (
           <motion.div
-            key="error"
+            key="image"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center gap-4 z-20"
+            exit={{ opacity: 0 }}
+            className="w-full h-full relative"
           >
-            <div className="flex items-center gap-2 text-cinematic-accent">
-              <AlertCircle className="w-4 h-4" />
-              <p className="text-xs font-serif">{error}</p>
+            <img
+              src={imageUrl}
+              alt={alt}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            
+            {/* Overlay controls */}
+            <div className="absolute top-6 right-6 flex gap-2">
+              <button
+                onClick={downloadImage}
+                className="p-3 bg-white/80 backdrop-blur-md border border-stone-200 rounded-full hover:bg-white transition-all shadow-md text-stone-600 hover:text-ink-red"
+                title="下载图片"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 bg-white/80 backdrop-blur-md border border-stone-200 rounded-full hover:bg-white transition-all shadow-md text-stone-600 hover:text-ink-red"
+                title="更换图片"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+              <button
+                onClick={clearImage}
+                className="p-3 bg-white/80 backdrop-blur-md border border-stone-200 rounded-full hover:bg-white transition-all shadow-md text-stone-600 hover:text-ink-red"
+                title="移除图片"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={generateImage}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] border border-white/10 hover:bg-white/10 transition-colors font-serif text-white/60"
-            >
-              <RefreshCw className="w-3 h-3" />
-              再次尝试
-            </button>
-            {imageUrl && (
-              <p className="text-[10px] text-white/20 font-serif italic">已加载备用意境图</p>
-            )}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
 
-      {imageUrl && (
-        <motion.div
-          key="image"
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={{ opacity: error ? 0.3 : 1, scale: 1 }}
-          transition={{ duration: 2, ease: "easeOut" }}
-          className="w-full h-full"
-        >
-          <img
-            src={imageUrl}
-            alt={alt}
-            className="w-full h-full object-cover opacity-60 mix-blend-lighten"
-            referrerPolicy="no-referrer"
-          />
-          {/* Cinematic Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-cinematic-bg/80 via-transparent to-cinematic-bg" />
-          <div className="absolute inset-0 bg-gradient-to-r from-cinematic-bg via-transparent to-cinematic-bg/40" />
-          <div className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
-        </motion.div>
-      )}
+            <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-md border border-stone-200 rounded-full text-[10px] uppercase tracking-widest text-stone-600 font-bold shadow-sm">
+              <CheckCircle2 className="w-3 h-3 text-green-600" />
+              已自动保存
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
