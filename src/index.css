@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;400;700&family=Outfit:wght@100;300;400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Noto Serif SC", serif;
+  --font-sans: "Outfit", sans-serif;
+  --color-cinematic-bg: #0a0a0a;
+  --color-cinematic-paper: #1a1a1a;
+  --color-cinematic-accent: #8b0000;
+}
+
+@layer base {
+  body {
+    @apply bg-cinematic-bg text-white/90 antialiased;
+  }
+}
+
+.writing-vertical-rl {
+  writing-mode: vertical-rl;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
