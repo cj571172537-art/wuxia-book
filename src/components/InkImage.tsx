@@ -6,10 +6,11 @@ interface InkImageProps {
   alt: string;
   className?: string;
   imageUrl?: string | null;
+  staticImage?: string;
   onImageChange: (dataUrl: string | null) => void;
 }
 
-export const InkImage: React.FC<InkImageProps> = ({ alt, className, imageUrl, onImageChange }) => {
+export const InkImage: React.FC<InkImageProps> = ({ alt, className, imageUrl, staticImage, onImageChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,14 +32,17 @@ export const InkImage: React.FC<InkImageProps> = ({ alt, className, imageUrl, on
   };
 
   const downloadImage = () => {
-    if (!imageUrl) return;
+    const currentUrl = imageUrl || staticImage;
+    if (!currentUrl) return;
     const link = document.createElement('a');
-    link.href = imageUrl;
+    link.href = currentUrl;
     link.download = `assassin-${alt.replace(/\s+/g, '-')}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
+
+  const displayUrl = imageUrl || staticImage;
 
   return (
     <div className={`relative overflow-hidden bg-stone-100/50 border border-stone-200 rounded-3xl ${className}`}>
@@ -51,7 +55,7 @@ export const InkImage: React.FC<InkImageProps> = ({ alt, className, imageUrl, on
       />
 
       <AnimatePresence mode="wait">
-        {!imageUrl ? (
+        {!displayUrl ? (
           <motion.div
             key="empty"
             initial={{ opacity: 0 }}
@@ -83,7 +87,7 @@ export const InkImage: React.FC<InkImageProps> = ({ alt, className, imageUrl, on
             className="w-full h-full relative"
           >
             <img
-              src={imageUrl}
+              src={displayUrl}
               alt={alt}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
@@ -105,18 +109,29 @@ export const InkImage: React.FC<InkImageProps> = ({ alt, className, imageUrl, on
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
-              <button
-                onClick={clearImage}
-                className="p-3 bg-white/80 backdrop-blur-md border border-stone-200 rounded-full hover:bg-white transition-all shadow-md text-stone-600 hover:text-ink-red"
-                title="移除图片"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {imageUrl && (
+                <button
+                  onClick={clearImage}
+                  className="p-3 bg-white/80 backdrop-blur-md border border-stone-200 rounded-full hover:bg-white transition-all shadow-md text-stone-600 hover:text-ink-red"
+                  title="恢复默认图片"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-md border border-stone-200 rounded-full text-[10px] uppercase tracking-widest text-stone-600 font-bold shadow-sm">
-              <CheckCircle2 className="w-3 h-3 text-green-600" />
-              已自动保存
+              {imageUrl ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3 text-green-600" />
+                  已自动保存 (本地)
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="w-3 h-3 text-stone-400" />
+                  默认意境图
+                </>
+              )}
             </div>
           </motion.div>
         )}

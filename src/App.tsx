@@ -117,16 +117,16 @@ export default function App() {
               onClick={() => setSelectedId(point.id)}
               className={`relative cursor-pointer group overflow-hidden rounded-2xl border border-stone-200 bg-white/40 hover:bg-white/80 transition-all hover:shadow-xl hover:shadow-stone-200/50 ${spans[index] || ""}`}
             >
-              {/* Card Cover Image */}
+              {/* Card Cover Image (User upload or Static fallback) */}
               <AnimatePresence>
-                {images[point.id] && (
+                {(images[point.id] || point.staticImage) && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="absolute inset-0 z-0"
                   >
                     <img 
-                      src={images[point.id]} 
+                      src={images[point.id] || point.staticImage} 
                       alt={point.title}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
@@ -138,7 +138,7 @@ export default function App() {
 
               <div className="absolute inset-0 p-8 flex flex-col justify-between z-10">
                 <div className="flex justify-between items-start">
-                  <span className={`text-sm font-serif italic font-bold ${images[point.id] ? 'text-white' : 'text-ink-red'}`}>
+                  <span className={`text-sm font-serif italic font-bold ${(images[point.id] || point.staticImage) ? 'text-white' : 'text-ink-red'}`}>
                     {point.id.toString().padStart(2, '0')}
                   </span>
                   <div className="px-2 py-1 rounded border border-stone-200 text-[8px] tracking-widest opacity-0 group-hover:opacity-100 transition-opacity bg-white/50">
@@ -146,17 +146,17 @@ export default function App() {
                   </div>
                 </div>
                 <div>
-                  <h3 className={`text-2xl font-serif mb-1 transition-colors ${images[point.id] ? 'text-white group-hover:text-white' : 'text-stone-900 group-hover:text-ink-red'}`}>
+                  <h3 className={`text-2xl font-serif mb-1 transition-colors ${(images[point.id] || point.staticImage) ? 'text-white group-hover:text-white' : 'text-stone-900 group-hover:text-ink-red'}`}>
                     {point.title}
                   </h3>
-                  <p className={`text-[10px] uppercase tracking-widest font-medium ${images[point.id] ? 'text-stone-300' : 'text-stone-400'}`}>
+                  <p className={`text-[10px] uppercase tracking-widest font-medium ${(images[point.id] || point.staticImage) ? 'text-stone-300' : 'text-stone-400'}`}>
                     {point.subtitle}
                   </p>
                 </div>
               </div>
               
-              {/* Decorative background elements - only show if no image */}
-              {!images[point.id] && (
+              {/* Decorative background elements - only show if no image at all */}
+              {!(images[point.id] || point.staticImage) && (
                 <div className="absolute -bottom-6 -right-6 text-[12rem] font-serif opacity-[0.03] group-hover:opacity-[0.07] transition-opacity pointer-events-none text-ink-red">
                   隐
                 </div>
@@ -194,6 +194,7 @@ export default function App() {
                 <PlotCard 
                   point={selectedPoint} 
                   imageUrl={images[selectedPoint.id]} 
+                  staticImage={selectedPoint.staticImage}
                   onImageChange={(dataUrl) => handleImageChange(selectedPoint.id, dataUrl)}
                 />
               </div>
